@@ -20,19 +20,21 @@ type entry struct {
 	timeout time.Time
 }
 
-func New(maxEntries int, _duration time.Duration) *Cache {
-	c := &Cache{
+func New(maxEntries int, duration time.Duration) *Cache {
+	var c = &Cache{
 		maxEntries: maxEntries,
 		ll:         list.New(),
 		cache:      make(map[string]*list.Element),
-		duration:   _duration,
+		duration:   duration,
 	}
-	go func() {
-		for {
-			d := c.check()
-			time.Sleep(d)
-		}
-	}()
+	if duration > 0 {
+		go func() {
+			for {
+				var d = c.check()
+				time.Sleep(d)
+			}
+		}()
+	}
 	return c
 }
 
@@ -45,7 +47,7 @@ func (c *Cache) check() time.Duration {
 		if ele == nil {
 			return c.duration + 10*time.Second
 		}
-		timeout := ele.Value.(*entry).timeout
+		var timeout = ele.Value.(*entry).timeout
 		if now.Before(timeout) {
 			var dur = timeout.Sub(now)
 			if dur < 10*time.Second {
@@ -66,24 +68,19 @@ func (c *Cache) Put(key string, value interface{}) {
 func (c *Cache) put(key string, value interface{}) {
 	if ee, ok := c.cache[key]; ok {
 		c.ll.MoveToFront(ee)
-		v := ee.Value.(*entry)
+		var v = ee.Value.(*entry)
 		v.value = value
 		v.timeout = time.Now().Add(c.duration)
 		return
 	}
-	ele := c.ll.PushFront(&entry{key, value, time.Now().Add(c.duration)})
+	var ele = c.ll.PushFront(&entry{key, value, time.Now().Add(c.duration)})
 	c.cache[key] = ele
 
 	if c.maxEntries == 0 {
 		return
 	}
-	count := 0
 	for c.ll.Len() > c.maxEntries {
 		c.removeOldest()
-		if count > 100 {
-			break
-		}
-		count++
 	}
 }
 
@@ -106,7 +103,7 @@ func (c *Cache) Get(key string, setter func() interface{}) interface{} {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	v := c.get(key)
+	var v = c.get(key)
 	if v != nil {
 		return v
 	}
@@ -127,7 +124,7 @@ func (c *Cache) Remove(key string) {
 }
 
 func (c *Cache) removeOldest() {
-	ele := c.ll.Back()
+	var ele = c.ll.Back()
 	if ele != nil {
 		c.removeElement(ele)
 	}
@@ -135,7 +132,7 @@ func (c *Cache) removeOldest() {
 
 func (c *Cache) removeElement(e *list.Element) {
 	c.ll.Remove(e)
-	kv := e.Value.(*entry)
+	var kv = e.Value.(*entry)
 	delete(c.cache, kv.key)
 }
 
